@@ -1,5 +1,9 @@
+import { supabase } from "../supabase";
+
 export const SITE_CONTENT_STORAGE_KEY = "portfolioSiteContent";
 export const SITE_CONTENT_UPDATED_EVENT = "portfolioSiteContentUpdated";
+export const SITE_CONTENT_TABLE = "site_content";
+export const SITE_CONTENT_ROW_ID = "main";
 
 export const DEFAULT_SITE_CONTENT = {
   home: {
@@ -63,4 +67,48 @@ export const writeSiteContent = (content) => {
     window.dispatchEvent(new CustomEvent(SITE_CONTENT_UPDATED_EVENT, { detail: nextContent }));
   }
   return nextContent;
+};
+
+export const fetchSiteContent = async () => {
+  const localContent = readSiteContent();
+
+  try {
+    const { data, error } = await supabase
+      .from(SITE_CONTENT_TABLE)
+      .select("content")
+      .eq("id", SITE_CONTENT_ROW_ID)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data?.content) return localContent;
+
+    return writeSiteContent(data.content);
+  } catch (error) {
+    console.warn("Failed to fetch site content from Supabase:", error.message);
+    return localContent;
+  }
+};
+
+export const saveSiteContent = async (content) => {
+  const nextContent = writeSiteContent(content);
+
+  try {
+    const { error } = await supabase
+      .from(SITE_CONTENT_TABLE)
+      .upsert(
+        {
+          id: SITE_CONTENT_ROW_ID,
+          content: nextContent,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+
+    if (error) throw error;
+
+    return { content: nextContent, synced: true, error: null };
+  } catch (error) {
+    console.error("Failed to save site content to Supabase:", error.message);
+    return { content: nextContent, synced: false, error };
+  }
 };
