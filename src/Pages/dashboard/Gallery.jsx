@@ -1,0 +1,278 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../../supabase'
+import { Images, Upload, Trash2, ImageIcon, Plus, AlertCircle, CheckCircle2 } from 'lucide-react'
+
+const Card = ({ children, className = '' }) => (
+  <div className={`relative group ${className}`}>
+    <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl blur opacity-10 group-hover:opacity-25 transition duration-500" />
+    <div className="relative bg-white/5 backdrop-blur-xl border border-white/12 rounded-2xl h-full">
+      {children}
+    </div>
+  </div>
+)
+
+const SkeletonCard = () => (
+  <div className="relative">
+    <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl blur opacity-10" />
+    <div className="relative bg-white/5 border border-white/12 rounded-2xl overflow-hidden">
+      <div className="w-full aspect-square bg-white/5 animate-pulse" />
+    </div>
+  </div>
+)
+
+const GalleryCard = ({ item, onDelete }) => {
+  const [imgLoaded, setImgLoaded] = useState(false)
+
+  return (
+    <div className="relative group">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl blur opacity-10 group-hover:opacity-30 transition duration-500" />
+      <div className="relative bg-white/5 border border-white/12 rounded-2xl overflow-hidden">
+        {!imgLoaded && <div className="w-full aspect-square bg-white/5 animate-pulse" />}
+        <img
+          src={item.Img}
+          alt={item.Title || 'Gallery image'}
+          onLoad={() => setImgLoaded(true)}
+          className={`w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-500 ${imgLoaded ? 'block' : 'hidden'}`}
+        />
+        {imgLoaded && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3 gap-2">
+            {item.Title && <p className="text-white text-xs font-medium line-clamp-2">{item.Title}</p>}
+            <button
+              onClick={() => onDelete(item.id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-xs w-full justify-center hover:bg-red-500/30 transition-colors"
+            >
+              <Trash2 className="w-3 h-3" /> Delete
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function Gallery() {
+  const [items, setItems] = useState([])
+  const [file, setFile] = useState(null)
+  const [title, setTitle] = useState('')
+  const [preview, setPreview] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const fetchGallery = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('gallery')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setError(`Gagal mengambil gallery: ${error.message}`)
+    } else {
+      setItems(data || [])
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchGallery()
+  }, [])
+
+  const handleFile = (f) => {
+    setError('')
+    setSuccess('')
+    if (!f) return
+
+    if (!f.type.startsWith('image/')) {
+      setError('File harus berupa gambar PNG, JPG, atau WEBP.')
+      return
+    }
+
+    if (f.size > 5 * 1024 * 1024) {
+      setError('Ukuran gambar maksimal 5MB. Kompres dulu gambarnya lalu upload lagi.')
+      return
+    }
+
+    setFile(f)
+    setPreview(URL.createObjectURL(f))
+  }
+
+  const uploadImage = async () => {
+    if (!file || uploading) return
+
+    setUploading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const safeName = file.name
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[^a-zA-Z0-9-_]/g, '-')
+        .slice(0, 60)
+      const fileName = `gallery-${Date.now()}-${safeName}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('gallery-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type,
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('gallery-images').getPublicUrl(fileName)
+      const publicUrl = data?.publicUrl
+
+      if (!publicUrl) throw new Error('Gagal membuat public URL untuk gambar gallery.')
+
+      const { error: insertError } = await supabase
+        .from('gallery')
+        .insert({ Img: publicUrl, Title: title.trim() || null })
+
+      if (insertError) throw insertError
+
+      setFile(null)
+      setPreview(null)
+      setTitle('')
+      setSuccess('Foto gallery berhasil diupload.')
+      setTimeout(() => setSuccess(''), 3500)
+      await fetchGallery()
+    } catch (err) {
+      setError(`Gagal upload gallery: ${err.message || 'Unknown error'}`)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const deleteItem = async (id) => {
+    if (!confirm('Delete this gallery image?')) return
+    setError('')
+    setSuccess('')
+
+    const { error } = await supabase.from('gallery').delete().eq('id', id)
+    if (error) {
+      setError(`Gagal menghapus gallery: ${error.message}`)
+      return
+    }
+
+    setSuccess('Foto gallery berhasil dihapus.')
+    fetchGallery()
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-xl blur opacity-50" />
+          <div className="relative w-9 h-9 bg-[#030014] rounded-xl border border-white/15 flex items-center justify-center">
+            <Images className="w-4 h-4 text-indigo-400" />
+          </div>
+        </div>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">My Gallery</h1>
+          <p className="text-gray-500 text-xs">
+            {loading ? 'Loading...' : `${items.length} gallery images total`}
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      <Card>
+        <div className="p-5 sm:p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Plus className="w-4 h-4 text-indigo-400" /> Upload Gallery Image
+          </h2>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-indigo-300/70 uppercase tracking-wider font-medium">
+              Title / Caption optional
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={80}
+              placeholder="e.g. Kegiatan sekolah, lomba, workshop..."
+              className="w-full bg-[#0d0d22] border border-white/10 rounded-xl px-4 py-2.5 text-gray-200 placeholder-gray-600 text-sm outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+            />
+          </div>
+
+          <label
+            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]) }}
+            className={`flex flex-col items-center justify-center w-full min-h-[180px] rounded-xl border-2 border-dashed cursor-pointer transition-all duration-300 ${
+              dragOver ? 'border-indigo-400/60 bg-indigo-500/10' : 'border-white/12 bg-white/4 hover:border-indigo-500/35 hover:bg-white/7'
+            }`}
+          >
+            {preview ? (
+              <img src={preview} alt="preview" className="max-h-48 object-contain rounded-lg p-2" />
+            ) : (
+              <div className="text-center space-y-2 p-6">
+                <div className="w-11 h-11 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto">
+                  <ImageIcon className="w-5 h-5 text-indigo-400" />
+                </div>
+                <p className="text-sm text-gray-300">Drag & drop or click to upload</p>
+                <p className="text-xs text-gray-600">PNG, JPG, WEBP supported · max 5MB</p>
+              </div>
+            )}
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => handleFile(e.target.files[0])} className="hidden" />
+          </label>
+
+          {file && (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-xs text-gray-400 truncate flex-1">{file.name}</p>
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => { setFile(null); setPreview(null); setError(''); setSuccess('') }}
+                  className="px-3 py-1.5 rounded-xl border border-white/10 text-gray-500 hover:text-white text-xs transition-colors">
+                  Clear
+                </button>
+                <button onClick={uploadImage} disabled={uploading} className="relative group/u disabled:opacity-60">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-[#4f52c9] to-[#8644c5] rounded-xl opacity-60 blur group-hover/u:opacity-100 transition duration-300" />
+                  <div className="relative flex items-center gap-2 px-4 py-1.5 bg-[#030014] rounded-xl border border-white/10">
+                    {uploading ? <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Upload className="w-3.5 h-3.5 text-indigo-400" />}
+                    <span className="text-xs text-gray-200">{uploading ? 'Uploading...' : 'Upload'}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : items.length === 0 ? (
+        <Card>
+          <div className="p-16 text-center">
+            <Images className="w-10 h-10 text-gray-700 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm">No gallery images yet.</p>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          {items.map(item => <GalleryCard key={item.id} item={item} onDelete={deleteItem} />)}
+        </div>
+      )}
+    </div>
+  )
+}
