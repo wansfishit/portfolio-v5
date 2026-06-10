@@ -100,13 +100,68 @@ const Home = () => {
       disable: false,
     });
 
-    const refreshAos = () => AOS.refresh();
+    const refreshAos = () => AOS.refreshHard();
     window.addEventListener('load', refreshAos);
     window.addEventListener('resize', refreshAos);
 
     return () => {
       window.removeEventListener('load', refreshAos);
       window.removeEventListener('resize', refreshAos);
+    };
+  }, []);
+
+  useEffect(() => {
+    const homeSection = document.getElementById('Home');
+    if (!homeSection) return;
+
+    let timeouts = [];
+
+    const clearTimers = () => {
+      timeouts.forEach(clearTimeout);
+      timeouts = [];
+    };
+
+    const getAnimatedItems = () => Array.from(homeSection.querySelectorAll('[data-aos]'));
+
+    const resetAnimations = () => {
+      clearTimers();
+      getAnimatedItems().forEach((item) => {
+        item.classList.remove('aos-animate');
+      });
+    };
+
+    const playAnimations = () => {
+      resetAnimations();
+      requestAnimationFrame(() => {
+        getAnimatedItems().forEach((item) => {
+          const delay = Number(item.getAttribute('data-aos-delay') || 0);
+          const timer = setTimeout(() => {
+            item.classList.add('aos-animate');
+          }, delay);
+          timeouts.push(timer);
+        });
+      });
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          playAnimations();
+        } else {
+          resetAnimations();
+        }
+      },
+      {
+        threshold: 0.22,
+        rootMargin: '-10% 0px -10% 0px',
+      }
+    );
+
+    observer.observe(homeSection);
+
+    return () => {
+      observer.disconnect();
+      clearTimers();
     };
   }, []);
 
