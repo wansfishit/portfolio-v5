@@ -4,12 +4,14 @@ import { supabase } from '../supabase'
 import Projects from './dashboard/Projects'
 import Certificates from './dashboard/Certificates'
 import Comments from './dashboard/Comments'
-import { FolderGit2, Award, MessageSquare, LogOut, LayoutDashboard, Menu } from 'lucide-react'
+import SiteEditor from './dashboard/SiteEditor'
+import { FolderGit2, Award, MessageSquare, LogOut, LayoutDashboard, Menu, UserPen } from 'lucide-react'
 
 const NAV_ITEMS = [
   { to: 'projects', label: 'Projects', icon: FolderGit2 },
   { to: 'certificates', label: 'Certificates', icon: Award },
   { to: 'comments', label: 'Comments', icon: MessageSquare },
+  { to: 'site-editor', label: 'Edit Website', icon: UserPen },
 ]
 
 export default function Dashboard() {
@@ -127,6 +129,7 @@ export default function Dashboard() {
             <Route path="projects" element={<Projects />} />
             <Route path="certificates" element={<Certificates />} />
             <Route path="comments" element={<Comments />} />
+            <Route path="site-editor" element={<SiteEditor />} />
           </Routes>
         </main>
       </div>
