@@ -4,12 +4,14 @@ import { supabase } from '../supabase'
 import Projects from './dashboard/Projects'
 import Certificates from './dashboard/Certificates'
 import Comments from './dashboard/Comments'
+import Gallery from './dashboard/Gallery'
 import SiteEditor from './dashboard/SiteEditor'
-import { FolderGit2, Award, MessageSquare, LogOut, LayoutDashboard, Menu, UserPen } from 'lucide-react'
+import { FolderGit2, Award, MessageSquare, LogOut, LayoutDashboard, Menu, UserPen, Images } from 'lucide-react'
 
 const NAV_ITEMS = [
   { to: 'projects', label: 'Projects', icon: FolderGit2 },
   { to: 'certificates', label: 'Certificates', icon: Award },
+  { to: 'gallery', label: 'My Gallery', icon: Images },
   { to: 'comments', label: 'Comments', icon: MessageSquare },
   { to: 'site-editor', label: 'Edit Website', icon: UserPen },
 ]
@@ -128,6 +130,7 @@ export default function Dashboard() {
             <Route index element={<Navigate to="projects" replace />} />
             <Route path="projects" element={<Projects />} />
             <Route path="certificates" element={<Certificates />} />
+            <Route path="gallery" element={<Gallery />} />
             <Route path="comments" element={<Comments />} />
             <Route path="site-editor" element={<SiteEditor />} />
           </Routes>
