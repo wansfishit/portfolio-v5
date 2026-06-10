@@ -92,12 +92,22 @@ const Home = () => {
 
   useEffect(() => {
     AOS.init({
-      once: true,
+      once: false,
+      mirror: true,
       offset: 10,
       duration: window.innerWidth < 640 ? 350 : 450,
       delay: 0,
       disable: false,
     });
+
+    const refreshAos = () => AOS.refresh();
+    window.addEventListener('load', refreshAos);
+    window.addEventListener('resize', refreshAos);
+
+    return () => {
+      window.removeEventListener('load', refreshAos);
+      window.removeEventListener('resize', refreshAos);
+    };
   }, []);
 
   useEffect(() => {
