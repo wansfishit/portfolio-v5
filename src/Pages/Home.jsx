@@ -94,8 +94,9 @@ const Home = () => {
     AOS.init({
       once: true,
       offset: 10,
-      duration: 450,
-      disable: window.innerWidth < 640,
+      duration: window.innerWidth < 640 ? 350 : 450,
+      delay: 0,
+      disable: false,
     });
   }, []);
 
