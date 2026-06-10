@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from "../../supabase";
-import { Award, Upload, Trash2, ImageIcon, Plus } from 'lucide-react'
+import { Award, Upload, Trash2, ImageIcon, Plus, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 const Card = ({ children, className = '' }) => (
   <div className={`relative group ${className}`}>
@@ -27,7 +27,6 @@ const CertCard = ({ cert, onDelete }) => {
     <div className="relative group">
       <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl blur opacity-10 group-hover:opacity-30 transition duration-500" />
       <div className="relative bg-white/5 border border-white/12 rounded-2xl overflow-hidden">
-        {/* Skeleton shown until image loads */}
         {!imgLoaded && (
           <div className="w-full aspect-[16/11.5] bg-white/5 animate-pulse" />
         )}
@@ -59,42 +58,106 @@ export default function Certificates() {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const fetchCerts = async () => {
     setLoading(true)
-    const { data } = await supabase.from('certificates').select('*').order('created_at', { ascending: false })
-    setCerts(data || [])
+    const { data, error } = await supabase.from('certificates').select('*').order('created_at', { ascending: false })
+    if (error) {
+      setError(`Gagal mengambil sertifikat: ${error.message}`)
+    } else {
+      setCerts(data || [])
+    }
     setLoading(false)
   }
 
   useEffect(() => { fetchCerts() }, [])
 
   const handleFile = (f) => {
+    setError('')
+    setSuccess('')
     if (!f) return
+
+    if (!f.type.startsWith('image/')) {
+      setError('File harus berupa gambar PNG, JPG, atau WEBP.')
+      return
+    }
+
+    if (f.size > 5 * 1024 * 1024) {
+      setError('Ukuran gambar maksimal 5MB. Kompres dulu gambarnya lalu upload lagi.')
+      return
+    }
+
     setFile(f)
     setPreview(URL.createObjectURL(f))
   }
 
   const uploadImage = async () => {
-    if (!file) return
+    if (!file || uploading) return
+
     setUploading(true)
-    const fileName = `cert-${Date.now()}-${file.name}`
-    await supabase.storage.from('certificate-images').upload(fileName, file)
-    const { data } = supabase.storage.from('certificate-images').getPublicUrl(fileName)
-    await supabase.from('certificates').insert({ Img: data.publicUrl })
-    setFile(null); setPreview(null); setUploading(false)
-    fetchCerts()
+    setError('')
+    setSuccess('')
+
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const safeName = file.name
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[^a-zA-Z0-9-_]/g, '-')
+        .slice(0, 60)
+      const fileName = `cert-${Date.now()}-${safeName}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('certificate-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type,
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('certificate-images').getPublicUrl(fileName)
+      const publicUrl = data?.publicUrl
+
+      if (!publicUrl) throw new Error('Gagal membuat public URL untuk gambar sertifikat.')
+
+      const { error: insertError } = await supabase
+        .from('certificates')
+        .insert({ Img: publicUrl })
+
+      if (insertError) throw insertError
+
+      setFile(null)
+      setPreview(null)
+      setSuccess('Sertifikat berhasil diupload.')
+      setTimeout(() => setSuccess(''), 3500)
+      await fetchCerts()
+    } catch (err) {
+      setError(`Gagal upload sertifikat: ${err.message || 'Unknown error'}`)
+    } finally {
+      setUploading(false)
+    }
   }
 
   const deleteCert = async (id) => {
     if (!confirm('Delete this certificate?')) return
-    await supabase.from('certificates').delete().eq('id', id)
+    setError('')
+    setSuccess('')
+
+    const { error } = await supabase.from('certificates').delete().eq('id', id)
+    if (error) {
+      setError(`Gagal menghapus sertifikat: ${error.message}`)
+      return
+    }
+
+    setSuccess('Sertifikat berhasil dihapus.')
     fetchCerts()
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="relative">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-xl blur opacity-50" />
@@ -110,7 +173,20 @@ export default function Certificates() {
         </div>
       </div>
 
-      {/* Upload Card */}
+      {error && (
+        <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
+
       <Card>
         <div className="p-5 sm:p-6 space-y-4">
           <h2 className="text-sm font-semibold text-white flex items-center gap-2">
@@ -133,21 +209,21 @@ export default function Certificates() {
                   <ImageIcon className="w-5 h-5 text-indigo-400" />
                 </div>
                 <p className="text-sm text-gray-300">Drag & drop or click to upload</p>
-                <p className="text-xs text-gray-600">PNG, JPG, WEBP supported</p>
+                <p className="text-xs text-gray-600">PNG, JPG, WEBP supported · max 5MB</p>
               </div>
             )}
-            <input type="file" accept="image/*" onChange={e => handleFile(e.target.files[0])} className="hidden" />
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => handleFile(e.target.files[0])} className="hidden" />
           </label>
 
           {file && (
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <p className="text-xs text-gray-400 truncate flex-1">{file.name}</p>
               <div className="flex gap-2 shrink-0">
-                <button onClick={() => { setFile(null); setPreview(null) }}
+                <button onClick={() => { setFile(null); setPreview(null); setError(''); setSuccess('') }}
                   className="px-3 py-1.5 rounded-xl border border-white/10 text-gray-500 hover:text-white text-xs transition-colors">
                   Clear
                 </button>
-                <button onClick={uploadImage} disabled={uploading} className="relative group/u">
+                <button onClick={uploadImage} disabled={uploading} className="relative group/u disabled:opacity-60">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-[#4f52c9] to-[#8644c5] rounded-xl opacity-60 blur group-hover/u:opacity-100 transition duration-300" />
                   <div className="relative flex items-center gap-2 px-4 py-1.5 bg-[#030014] rounded-xl border border-white/10">
                     {uploading ? <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Upload className="w-3.5 h-3.5 text-indigo-400" />}
@@ -160,7 +236,6 @@ export default function Certificates() {
         </div>
       </Card>
 
-      {/* Grid */}
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
