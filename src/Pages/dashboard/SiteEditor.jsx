@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, RotateCcw, Save, Type } from "lucide-react";
 import {
   DEFAULT_SITE_CONTENT,
-  readSiteContent,
-  writeSiteContent,
+  fetchSiteContent,
+  saveSiteContent,
 } from "../../data/siteContent";
 
 const SectionCard = ({ title, description, children }) => (
@@ -50,19 +50,39 @@ const TextAreaField = ({ label, value, onChange, placeholder, rows = 4 }) => (
 );
 
 export default function SiteEditor() {
-  const [content, setContent] = useState(() => readSiteContent());
-  const [saved, setSaved] = useState(false);
+  const [content, setContent] = useState(DEFAULT_SITE_CONTENT);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState(null);
 
   const home = content.home;
   const about = content.about;
 
+  useEffect(() => {
+    let mounted = true;
+
+    const loadContent = async () => {
+      setLoading(true);
+      const data = await fetchSiteContent();
+      if (!mounted) return;
+      setContent(data);
+      setLoading(false);
+    };
+
+    loadContent();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const setHome = (key, value) => {
-    setSaved(false);
+    setStatus(null);
     setContent((prev) => ({ ...prev, home: { ...prev.home, [key]: value } }));
   };
 
   const setAbout = (key, value) => {
-    setSaved(false);
+    setStatus(null);
     setContent((prev) => ({ ...prev, about: { ...prev.about, [key]: value } }));
   };
 
@@ -78,17 +98,51 @@ export default function SiteEditor() {
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
-    writeSiteContent(content);
-    setSaved(true);
+  const handleSave = async () => {
+    setSaving(true);
+    setStatus(null);
+
+    const result = await saveSiteContent(content);
+    setContent(result.content);
+    setSaving(false);
+
+    if (result.synced) {
+      setStatus({
+        type: "success",
+        message: "Perubahan tersimpan ke Supabase. HP/device lain akan ikut berubah setelah refresh.",
+      });
+    } else {
+      setStatus({
+        type: "error",
+        message: `Gagal simpan ke Supabase: ${result.error?.message || "unknown error"}. Cek tabel site_content di Supabase.`,
+      });
+    }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!confirm("Reset semua teks ke default?")) return;
-    const next = writeSiteContent(DEFAULT_SITE_CONTENT);
-    setContent(next);
-    setSaved(true);
+
+    setSaving(true);
+    setStatus(null);
+    const result = await saveSiteContent(DEFAULT_SITE_CONTENT);
+    setContent(result.content);
+    setSaving(false);
+
+    setStatus({
+      type: result.synced ? "success" : "error",
+      message: result.synced
+        ? "Default berhasil disimpan ke Supabase."
+        : `Reset lokal berhasil, tapi gagal simpan ke Supabase: ${result.error?.message || "unknown error"}`,
+    });
   };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-gray-300">
+        Loading data website dari Supabase...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -110,23 +164,30 @@ export default function SiteEditor() {
           <button
             type="button"
             onClick={handleReset}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm transition-colors"
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm transition-colors disabled:opacity-60"
           >
             <RotateCcw className="w-4 h-4" /> Reset
           </button>
-          <button type="button" onClick={handleSave} className="relative group shrink-0">
+          <button type="button" onClick={handleSave} disabled={saving} className="relative group shrink-0 disabled:opacity-60">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-[#4f52c9] to-[#8644c5] rounded-xl opacity-50 blur group-hover:opacity-80 transition duration-300" />
             <div className="relative flex items-center gap-2 px-4 py-2.5 bg-[#030014] rounded-xl border border-white/10">
               <Save className="w-4 h-4 text-indigo-400" />
-              <span className="text-sm text-gray-200">Save Changes</span>
+              <span className="text-sm text-gray-200">{saving ? "Saving..." : "Save Changes"}</span>
             </div>
           </button>
         </div>
       </div>
 
-      {saved && (
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-          Perubahan tersimpan. Refresh halaman portfolio kalau belum langsung berubah.
+      {status && (
+        <div
+          className={`rounded-xl px-4 py-3 text-sm border ${
+            status.type === "success"
+              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+              : "border-red-500/20 bg-red-500/10 text-red-300"
+          }`}
+        >
+          {status.message}
         </div>
       )}
 
