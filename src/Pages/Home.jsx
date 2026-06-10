@@ -79,9 +79,9 @@ const PAUSE_DURATION = 2000;
 const WORDS = ["Network & Telecom Student", "Tech Enthusiast"];
 const TECH_STACK = ["React", "Javascript", "Node.js", "Tailwind"];
 const SOCIAL_LINKS = [
-  { icon: Github, link: "https://github.com/EkiZR", label: "GitHub Profile" },
-  { icon: Linkedin, link: "https://www.linkedin.com/in/ekizr/", label: "LinkedIn Profile" },
-  { icon: Instagram, link: "https://www.instagram.com/ekizr_/?hl=id", label: "Instagram Profile" }
+  { icon: Github, link: "", label: "GitHub Profile" },
+  { icon: Linkedin, link: "", label: "LinkedIn Profile" },
+  { icon: Instagram, link: "", label: "Instagram Profile" }
 ];
 
 const Home = () => {
@@ -140,26 +140,22 @@ const Home = () => {
   return (
     <>
       <Helmet>
-        <title>Eki Zulfar Rachman — Frontend Web Developer</title>
-        <meta name="description" content="Website resmi Eki Zulfar Rachman, Front-End Web Developer. Saya berfokus pada penciptaan pengalaman digital yang menarik dan selalu berupaya memberikan solusi terbaik dalam setiap proyek yang saya kerjakan." />
-     <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://ekizr.com" />
-        <meta property="og:title" content="Eki Zulfar Rachman — Frontend Web Developer" />
-     <meta property="og:description" content="Website resmi dan portofolio Eki Zulfar Rachman, Front-End Web Developer." />
-        <meta property="og:url" content="https://ekizr.com" />
+        <title>Portofolio Tino</title>
+        <meta name="description" content="Website resmi dan portofolio Tino." />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://tino.cc.cd" />
+        <meta property="og:title" content="Portofolio Tino" />
+        <meta property="og:description" content="Website resmi dan portofolio Tino." />
+        <meta property="og:url" content="https://tino.cc.cd" />
         <meta property="og:type" content="website" />
         <script type="application/ld+json">{`
           {
             "@context": "https://schema.org",
             "@type": "Person",
-            "name": "Eki Zulfar Rachman",
+            "name": "Tino",
             "jobTitle": "Frontend Developer",
-            "url": "https://ekizr.com",
-            "sameAs": [
-              "https://github.com/EkiZR",
-              "https://www.linkedin.com/in/ekizr/",
-              "https://www.instagram.com/ekizr_/"
-            ]
+            "url": "https://tino.cc.cd",
+            "sameAs": []
           }
         `}</script>
       </Helmet>
@@ -206,7 +202,7 @@ const Home = () => {
 
                   {/* Social Links */}
                   <div className="hidden sm:flex gap-4 justify-start" data-aos="fade-up" data-aos-delay="1600">
-                    {SOCIAL_LINKS.map((social, index) => (
+                    {SOCIAL_LINKS.filter((social) => social.link).map((social, index) => (
                       <SocialLink key={index} {...social} />
                     ))}
                   </div>
