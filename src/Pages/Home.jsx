@@ -194,7 +194,7 @@ const Home = () => {
                 </div>
               </div>
 
-              <div className="hidden lg:flex w-full py-0 md:py-[10%] sm:py-0 lg:w-1/2 h-[600px] xl:h-[750px] relative items-center justify-center order-2 lg:order-2 mt-5 sm:mt-0"
+              <div className="w-full py-0 md:py-[10%] sm:py-0 lg:w-1/2 h-[260px] sm:h-[400px] lg:h-[600px] xl:h-[750px] relative flex items-center justify-center order-2 lg:order-2 mt-5 sm:mt-0"
                 onMouseEnter={() => setIsHovering(true)}
                 onMouseLeave={() => setIsHovering(false)}
                 data-aos="fade-left"
@@ -211,9 +211,19 @@ const Home = () => {
                       src="Animation1.gif"
                       alt="Developer Animation"
                       className={`w-full h-full object-contain transition-all duration-300 ${
-                        isHovering ? "scale-[90%] rotate-2" : "scale-[80%]"
+                        isHovering 
+                          ? "scale-[95%] sm:scale-[90%] md:scale-[90%] lg:scale-[90%] rotate-2" 
+                          : "scale-[90%] sm:scale-[80%] md:scale-[80%] lg:scale-[80%]"
                       }`}
                     />
+                  </div>
+
+                  <div className={`absolute inset-0 pointer-events-none transition-all duration-700 ${
+                    isHovering ? "opacity-50" : "opacity-20"
+                  }`}>
+                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-br from-indigo-500/10 to-purple-500/10 blur-3xl animate-[pulse_6s_cubic-bezier(0.4,0,0.6,1)_infinite] transition-all duration-700 ${
+                      isHovering ? "scale-110" : "scale-100"
+                    }`} />
                   </div>
                 </div>
               </div>
