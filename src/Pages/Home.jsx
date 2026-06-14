@@ -3,35 +3,37 @@ import { Helmet } from "react-helmet-async"
 import { Github, Linkedin, Mail, ExternalLink, Instagram, Sparkles } from "lucide-react"
 import AOS from 'aos'
 import 'aos/dist/aos.css'
+import { fetchSiteContent, readSiteContent, SITE_CONTENT_UPDATED_EVENT } from "../data/siteContent"
+import PresenceWidget from "../components/PresenceWidget"
 
-const StatusBadge = memo(() => (
+const StatusBadge = memo(({ text }) => (
   <div className="inline-block lg:mx-0" data-aos="zoom-in" data-aos-delay="50">
     <div className="relative group">
       <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur opacity-25 sm:group-hover:opacity-50 transition duration-300"></div>
       <div className="relative px-3 sm:px-4 py-2 rounded-full bg-black/40 backdrop-blur-xl border border-white/10">
         <span className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-transparent bg-clip-text sm:text-sm text-[0.7rem] font-medium flex items-center">
           <Sparkles className="sm:w-4 sm:h-4 w-3 h-3 mr-2 text-blue-400" />
-          Ready to Innovate
+          {text || "Ready to Innovate"}
         </span>
       </div>
     </div>
   </div>
 ));
 
-const MainTitle = memo(() => (
+const MainTitle = memo(({ titleLine1, titleLine2 }) => (
   <div className="space-y-2" data-aos="fade-up" data-aos-delay="100">
     <h1 className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
       <span className="relative inline-block">
         <span className="absolute -inset-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] blur-2xl opacity-20"></span>
         <span className="relative bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-          Frontend
+          {titleLine1 || "Frontend"}
         </span>
       </span>
       <br />
       <span className="relative inline-block mt-2">
         <span className="absolute -inset-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] blur-2xl opacity-20"></span>
         <span className="relative bg-gradient-to-r from-[#6366f1] to-[#a855f7] bg-clip-text text-transparent">
-          Developer
+          {titleLine2 || "Developer"}
         </span>
       </span>
     </h1>
@@ -83,12 +85,36 @@ const SOCIAL_LINKS = [
 ];
 
 const Home = () => {
+  const [siteContent, setSiteContent] = useState(() => readSiteContent());
+  const home = siteContent.home;
+
   const [text, setText] = useState("")
   const [isTyping, setIsTyping] = useState(true)
   const [wordIndex, setWordIndex] = useState(0)
   const [charIndex, setCharIndex] = useState(0)
   const [isLoaded, setIsLoaded] = useState(false)
   const [isHovering, setIsHovering] = useState(false)
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadContent = async () => {
+      const data = await fetchSiteContent();
+      if (mounted) setSiteContent(data);
+    };
+
+    const updateContent = () => setSiteContent(readSiteContent());
+
+    loadContent();
+    window.addEventListener("storage", updateContent);
+    window.addEventListener(SITE_CONTENT_UPDATED_EVENT, updateContent);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("storage", updateContent);
+      window.removeEventListener(SITE_CONTENT_UPDATED_EVENT, updateContent);
+    };
+  }, []);
 
   useEffect(() => {
     AOS.init({
@@ -171,9 +197,12 @@ const Home = () => {
   }, []);
 
   const handleTyping = useCallback(() => {
+    const words = home.typingWords && home.typingWords.length > 0 ? home.typingWords : ["Network & Telecom Student", "Tech Enthusiast"];
+    const currentWord = words[wordIndex % words.length] || "";
+
     if (isTyping) {
-      if (charIndex < WORDS[wordIndex].length) {
-        setText(prev => prev + WORDS[wordIndex][charIndex]);
+      if (charIndex < currentWord.length) {
+        setText(prev => prev + currentWord[charIndex]);
         setCharIndex(prev => prev + 1);
       } else {
         setTimeout(() => setIsTyping(false), PAUSE_DURATION);
@@ -183,11 +212,11 @@ const Home = () => {
         setText(prev => prev.slice(0, -1));
         setCharIndex(prev => prev - 1);
       } else {
-        setWordIndex(prev => (prev + 1) % WORDS.length);
+        setWordIndex(prev => (prev + 1) % words.length);
         setIsTyping(true);
       }
     }
-  }, [charIndex, isTyping, wordIndex]);
+  }, [charIndex, isTyping, wordIndex, home.typingWords]);
 
   useEffect(() => {
     const timeout = setTimeout(
@@ -197,16 +226,22 @@ const Home = () => {
     return () => clearTimeout(timeout);
   }, [handleTyping]);
 
+  const socialLinksData = [
+    { icon: Github, link: home.githubUrl || "https://github.com/wansfishit", label: "GitHub Profile" },
+    { icon: Linkedin, link: home.linkedinUrl || "", label: "LinkedIn Profile" },
+    { icon: Instagram, link: home.instagramUrl || "https://www.instagram.com/r1stno?igsh=c2t0NmlpMjNodTQ%3D&utm_source=qr", label: "Instagram Profile" }
+  ];
+
   return (
     <>
       <Helmet>
-        <title>Portofolio Tino</title>
-        <meta name="description" content="Website resmi dan portofolio Tino." />
+        <title>{home.metaTitle || "Portofolio Tino"}</title>
+        <meta name="description" content={home.metaDescription || "Website resmi dan portofolio Tino."} />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://tino.cc.cd" />
-        <meta property="og:title" content="Portofolio Tino" />
-        <meta property="og:description" content="Website resmi dan portofolio Tino." />
-        <meta property="og:url" content="https://tino.cc.cd" />
+        <link rel="canonical" href={home.canonicalUrl || "https://tino.cc.cd"} />
+        <meta property="og:title" content={home.metaTitle || "Portofolio Tino"} />
+        <meta property="og:description" content={home.metaDescription || "Website resmi dan portofolio Tino."} />
+        <meta property="og:url" content={home.canonicalUrl || "https://tino.cc.cd"} />
         <meta property="og:type" content="website" />
       </Helmet>
 
@@ -216,8 +251,8 @@ const Home = () => {
             <div className="flex flex-col lg:flex-row items-center justify-center min-h-screen md:justify-between gap-0 sm:gap-12 lg:gap-20 py-24 sm:py-0">
               <div className="w-full lg:w-1/2 space-y-6 sm:space-y-8 text-left lg:text-left order-1 lg:order-1 lg:mt-0" data-aos="fade-right" data-aos-delay="50">
                 <div className="space-y-4 sm:space-y-6">
-                  <StatusBadge />
-                  <MainTitle />
+                  <StatusBadge text={home.statusBadge} />
+                  <MainTitle titleLine1={home.titleLine1} titleLine2={home.titleLine2} />
 
                   <div className="h-8 flex items-center" data-aos="fade-up" data-aos-delay="150">
                     <span className="text-xl md:text-2xl bg-gradient-to-r from-gray-100 to-gray-300 bg-clip-text text-transparent font-light">
@@ -227,24 +262,28 @@ const Home = () => {
                   </div>
 
                   <p className="text-base md:text-lg text-gray-400 max-w-xl leading-relaxed font-light" data-aos="fade-up" data-aos-delay="200">
-                    Menciptakan Website Yang Inovatif, Fungsional, dan User-Friendly untuk Solusi Digital.
+                    {home.description || "Menciptakan Website Yang Inovatif, Fungsional, dan User-Friendly untuk Solusi Digital."}
                   </p>
 
                   <div className="flex flex-wrap gap-3 justify-start" data-aos="fade-up" data-aos-delay="250">
-                    {TECH_STACK.map((tech, index) => (
+                    {(home.techStack && home.techStack.length > 0 ? home.techStack : ["React", "Javascript", "Node.js", "Tailwind"]).map((tech, index) => (
                       <TechStack key={index} tech={tech} />
                     ))}
                   </div>
 
                   <div className="flex flex-row gap-3 w-full justify-start" data-aos="fade-up" data-aos-delay="300">
-                    <CTAButton href="#Portofolio" text="Projects" icon={ExternalLink} />
-                    <CTAButton href="#Contact" text="Contact" icon={Mail} />
+                    <CTAButton href="#Portofolio" text={home.projectsButtonLabel || "Projects"} icon={ExternalLink} />
+                    <CTAButton href="#Contact" text={home.contactButtonLabel || "Contact"} icon={Mail} />
                   </div>
 
-                  <div className="hidden sm:flex gap-4 justify-start" data-aos="fade-up" data-aos-delay="350">
-                    {SOCIAL_LINKS.filter((social) => social.link).map((social, index) => (
+                  <div className="flex gap-4 justify-start" data-aos="fade-up" data-aos-delay="350">
+                    {socialLinksData.filter((social) => social.link).map((social, index) => (
                       <SocialLink key={index} {...social} />
                     ))}
+                  </div>
+
+                  <div className="pt-2" data-aos="fade-up" data-aos-delay="400">
+                    <PresenceWidget />
                   </div>
                 </div>
               </div>

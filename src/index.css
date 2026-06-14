@@ -185,3 +185,90 @@ body {
 	user-select: none;
 	cursor: default;
   } */
+
+:root {
+  --primary-color: #6366f1;
+  --secondary-color: #a855f7;
+  --primary-color-rgb: 99, 102, 241;
+  --secondary-color-rgb: 168, 85, 247;
+}
+
+.theme-cyberpunk {
+  --primary-color: #00f0ff;
+  --secondary-color: #ff007f;
+  --primary-color-rgb: 0, 240, 255;
+  --secondary-color-rgb: 255, 0, 127;
+}
+
+.theme-matrix {
+  --primary-color: #00ff66;
+  --secondary-color: #003300;
+  --primary-color-rgb: 0, 255, 102;
+  --secondary-color-rgb: 0, 51, 0;
+}
+
+.theme-sunset {
+  --primary-color: #ff5e36;
+  --secondary-color: #fca311;
+  --primary-color-rgb: 255, 94, 54;
+  --secondary-color-rgb: 252, 163, 17;
+}
+
+/* Color Overrides for Hardcoded Hex Values in Tailwind */
+.from-\[\#6366f1\] {
+  --tw-gradient-from: var(--primary-color) !important;
+  --tw-gradient-to: rgba(var(--primary-color-rgb), 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+.to-\[\#a855f7\] {
+  --tw-gradient-to: var(--secondary-color) !important;
+}
+.bg-\[\#6366f1\] {
+  background-color: var(--primary-color) !important;
+}
+.bg-\[\#a855f7\] {
+  background-color: var(--secondary-color) !important;
+}
+.text-\[\#6366f1\] {
+  color: var(--primary-color) !important;
+}
+.text-\[\#a855f7\] {
+  color: var(--secondary-color) !important;
+}
+.border-\[\#6366f1\] {
+  border-color: var(--primary-color) !important;
+}
+.border-\[\#a855f7\] {
+  border-color: var(--secondary-color) !important;
+}
+.border-\[\#a855f7\]\/50 {
+  border-color: rgba(var(--secondary-color-rgb), 0.5) !important;
+}
+.from-\[\#6366f1\]\/10 {
+  --tw-gradient-from: rgba(var(--primary-color-rgb), 0.1) !important;
+  --tw-gradient-to: rgba(var(--primary-color-rgb), 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+.to-\[\#a855f7\]\/10 {
+  --tw-gradient-to: rgba(var(--secondary-color-rgb), 0.1) !important;
+}
+.hover\:shadow-\[\#6366f1\]\/10:hover {
+  --tw-shadow-color: rgba(var(--primary-color-rgb), 0.1) !important;
+}
+.hover\:shadow-\[\#6366f1\]\/20:hover, .shadow-\[\#6366f1\]\/20 {
+  --tw-shadow-color: rgba(var(--primary-color-rgb), 0.2) !important;
+}
+.focus\:ring-\[\#6366f1\]\/30:focus {
+  --tw-ring-color: rgba(var(--primary-color-rgb), 0.3) !important;
+}
+.hover\:border-\[\#6366f1\]\/30:hover {
+  border-color: rgba(var(--primary-color-rgb), 0.3) !important;
+}
+.from-\[\#4f52c9\] {
+  --tw-gradient-from: var(--primary-color) !important;
+  --tw-gradient-to: rgba(var(--primary-color-rgb), 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+.to-\[\#8644c5\] {
+  --tw-gradient-to: var(--secondary-color) !important;
+}

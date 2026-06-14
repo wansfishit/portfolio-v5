@@ -14,6 +14,8 @@ import Footer from "./components/Footer";
 import Login from "./Pages/Login";
 import Dashboard from "./Pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ScrollToTop from "./components/ScrollToTop";
+import CustomCursor from "./components/CustomCursor";
 
 const Portofolio = lazy(() => import("./Pages/Portofolio"));
 const ContactPage = lazy(() => import("./Pages/Contact"));
@@ -130,6 +132,8 @@ function App() {
           />
         </Routes>
       </BrowserRouter>
+      <ScrollToTop />
+      <CustomCursor />
     </HelmetProvider>
   );
 }

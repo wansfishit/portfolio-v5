@@ -5,55 +5,75 @@ export default function PresenceWidget() {
   const [activities, setActivities] = useState([]);
 
   useEffect(() => {
+    const discordId = import.meta.env.VITE_DISCORD_ID || "343058866164236288"; // Fallback to phineas for demo
     const fetchPresence = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/presence");
-        const data = await res.json();
+        const res = await fetch(`https://api.lanyard.rest/v1/users/${discordId}`);
+        const responseData = await res.json();
+        
+        if (!responseData.success || !responseData.data) return;
+        const data = responseData.data;
 
-        const normalized = (data.activities || [])
-          .slice(0, 2)
-          .map((a, idx) => {
-            if (a.type === "spotify") {
-              return {
-                key: `spotify-${idx}`,
-                title: a.title,
-                subtitle: a.artist,
-                image: a.image,
-                type: "spotify",
-                icon: "spotify",
-                iconImage: a.iconImage || null
-              };
-            }
+        const acts = [];
 
-            if (a.type === "coding") {
-              return {
-                key: `coding-${idx}`,
-                title: a.details || "Coding",
-                subtitle: a.state || a.app,
-                type: "coding",
-                icon: "vscode",
-                iconImage: a.iconImage || null
-              };
-            }
-
-            return {
-              key: `activity-${idx}`,
-              title: a.name || "Playing a Game",
-              subtitle: a.state || a.type,
-              type: a.type || "unknown",
-              icon: "gaming",
-              iconImage: a.iconImage || null
-            };
+        // 1. Spotify Live Status
+        if (data.listening_to_spotify && data.spotify) {
+          acts.push({
+            key: "spotify",
+            title: data.spotify.song,
+            subtitle: data.spotify.artist,
+            image: data.spotify.album_art_url,
+            type: "spotify",
+            icon: "spotify",
+            iconImage: null
           });
+        }
 
-        setActivities(normalized);
+        // 2. Custom Discord RPC Activities
+        const lanyardActivities = data.activities || [];
+        lanyardActivities.forEach((a, idx) => {
+          if (a.name === "Spotify") return;
+
+          // Visual Studio Code
+          if (a.name === "Visual Studio Code") {
+            acts.push({
+              key: `coding-${idx}`,
+              title: a.details || "Coding",
+              subtitle: a.state || "VS Code",
+              type: "coding",
+              icon: "vscode",
+              iconImage: a.assets?.large_image 
+                ? (a.assets.large_image.startsWith("mp:") 
+                   ? `https://media.discordapp.net/${a.assets.large_image.replace("mp:", "")}`
+                   : `https://cdn.discordapp.com/app-assets/${a.application_id}/${a.assets.large_image}.png`)
+                : null
+            });
+            return;
+          }
+
+          // Other Gaming or general activity
+          acts.push({
+            key: `activity-${idx}`,
+            title: a.name || "Active",
+            subtitle: a.state || a.details || "",
+            type: "gaming",
+            icon: "gaming",
+            iconImage: a.assets?.large_image 
+              ? (a.assets.large_image.startsWith("mp:") 
+                 ? `https://media.discordapp.net/${a.assets.large_image.replace("mp:", "")}`
+                 : `https://cdn.discordapp.com/app-assets/${a.application_id}/${a.assets.large_image}.png`)
+              : null
+          });
+        });
+
+        setActivities(acts.slice(0, 2));
       } catch (error) {
         console.error("Failed to fetch presence:", error);
       }
     };
 
     fetchPresence();
-    const interval = setInterval(fetchPresence, 5000);
+    const interval = setInterval(fetchPresence, 10000); // Poll Lanyard every 10s
     return () => clearInterval(interval);
   }, []);
 

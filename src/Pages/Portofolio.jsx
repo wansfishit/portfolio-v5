@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import { supabase } from "../supabase";
 import PropTypes from "prop-types";
 import SwipeableViews from "react-swipeable-views";
@@ -148,7 +148,24 @@ export default function FullWidthTabs() {
     if (type === "gallery") setShowAllGallery((prev) => !prev);
   }, []);
 
-  const displayedProjects = showAllProjects ? projects : projects.slice(0, initialItems);
+  const [selectedTech, setSelectedTech] = useState("All");
+
+  const techFilterOptions = useMemo(() => {
+    const techs = new Set();
+    projects.forEach(p => {
+      if (Array.isArray(p.TechStack)) {
+        p.TechStack.forEach(t => techs.add(t.trim()));
+      }
+    });
+    return ["All", ...Array.from(techs)];
+  }, [projects]);
+
+  const filteredProjects = useMemo(() => {
+    if (selectedTech === "All") return projects;
+    return projects.filter(p => Array.isArray(p.TechStack) && p.TechStack.map(t => t.toLowerCase()).includes(selectedTech.toLowerCase()));
+  }, [projects, selectedTech]);
+
+  const displayedProjects = showAllProjects ? filteredProjects : filteredProjects.slice(0, initialItems);
   const displayedCertificates = showAllCertificates ? certificates : certificates.slice(0, initialItems);
   const displayedGallery = showAllGallery ? gallery : gallery.slice(0, initialItems);
 
@@ -195,16 +212,42 @@ export default function FullWidthTabs() {
 
         <SwipeableViews axis={theme.direction === "rtl" ? "x-reverse" : "x"} index={value} onChangeIndex={setValue}>
           <TabPanel value={value} index={0} dir={theme.direction}>
-            <div className="container mx-auto flex justify-center items-center overflow-hidden">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
-                {displayedProjects.map((project, index) => (
-                  <div key={project.id || index} data-aos={index % 3 === 0 ? "fade-up-right" : index % 3 === 1 ? "fade-up" : "fade-up-left"} data-aos-duration="1000">
-                    <CardProject Img={project.Img} Title={project.Title} Description={project.Description} Link={project.Link} id={project.id} />
-                  </div>
+            {/* Tech Stack Filter Tags */}
+            {techFilterOptions.length > 1 && (
+              <div className="flex flex-wrap gap-2 justify-center mb-8" data-aos="fade-up">
+                {techFilterOptions.map((tech) => (
+                  <button
+                    key={tech}
+                    onClick={() => {
+                      setSelectedTech(tech);
+                      setShowAllProjects(false);
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all duration-300 ${
+                      selectedTech === tech
+                        ? "bg-gradient-to-r from-[#6366f1] to-[#a855f7] border-transparent text-white shadow-lg shadow-indigo-500/25 scale-105"
+                        : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    {tech}
+                  </button>
                 ))}
               </div>
+            )}
+
+            <div className="container mx-auto flex justify-center items-center overflow-hidden">
+              {displayedProjects.length === 0 ? (
+                <EmptyState text="Tidak ada project dengan tech stack ini." />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
+                  {displayedProjects.map((project, index) => (
+                    <div key={project.id || index} data-aos={index % 3 === 0 ? "fade-up-right" : index % 3 === 1 ? "fade-up" : "fade-up-left"} data-aos-duration="1000">
+                      <CardProject Img={project.Img} Title={project.Title} Description={project.Description} Link={project.Link} id={project.id} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {projects.length > initialItems && <div className="mt-6 w-full flex justify-start"><ToggleButton onClick={() => toggleShowMore("projects")} isShowingMore={showAllProjects} /></div>}
+            {filteredProjects.length > initialItems && <div className="mt-6 w-full flex justify-start"><ToggleButton onClick={() => toggleShowMore("projects")} isShowingMore={showAllProjects} /></div>}
           </TabPanel>
 
           <TabPanel value={value} index={1} dir={theme.direction}>

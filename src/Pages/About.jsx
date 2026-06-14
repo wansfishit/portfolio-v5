@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Award, Code, FileText, Globe, Sparkles } from "lucide-react";
+import { Award, Code, FileText, Globe, Sparkles, X } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { fetchSiteContent, readSiteContent, SITE_CONTENT_UPDATED_EVENT } from "../data/siteContent";
+import Swal from "sweetalert2";
 
 const StatCard = ({ icon: Icon, value, label, description }) => (
   <div className="relative bg-gray-900/50 backdrop-blur-lg rounded-2xl p-6 border border-white/10 overflow-hidden transition-all duration-300 hover:scale-105 h-full">
@@ -21,6 +22,7 @@ export default function AboutPage() {
   const [siteContent, setSiteContent] = useState(() => readSiteContent());
   const about = siteContent.about;
   const [stats, setStats] = useState({ totalProjects: 0, totalCertificates: 0, YearExperience: 0 });
+  const [isCvModalOpen, setIsCvModalOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -111,11 +113,24 @@ export default function AboutPage() {
             </div>
 
             <div className="flex flex-col lg:flex-row items-center lg:items-start gap-4 lg:px-0 w-full">
-              <a href={about.cvUrl || "#"} className="w-full lg:w-auto" target={about.cvUrl ? "_blank" : undefined} rel={about.cvUrl ? "noopener noreferrer" : undefined}>
-                <button className="w-full lg:w-auto sm:px-6 py-2 sm:py-3 rounded-lg bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center lg:justify-start gap-2 shadow-lg hover:shadow-xl">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" /> {about.cvButtonLabel}
-                </button>
-              </a>
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!about.cvUrl) {
+                    Swal.fire({
+                      title: "Informasi",
+                      text: "CV belum diunggah oleh Admin.",
+                      icon: "info",
+                      confirmButtonColor: "#6366f1",
+                    });
+                    return;
+                  }
+                  setIsCvModalOpen(true);
+                }}
+                className="w-full lg:w-auto sm:px-6 py-2 sm:py-3 rounded-lg bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center lg:justify-start gap-2 shadow-lg hover:shadow-xl"
+              >
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5" /> {about.cvButtonLabel}
+              </button>
               <a href="#Portofolio" className="w-full lg:w-auto">
                 <button className="w-full lg:w-auto sm:px-6 py-2 sm:py-3 rounded-lg border border-[#a855f7]/50 text-[#a855f7] font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center lg:justify-start gap-2 hover:bg-[#a855f7]/10">
                   <Code className="w-4 h-4 sm:w-5 sm:h-5" /> {about.projectButtonLabel}
@@ -144,6 +159,31 @@ export default function AboutPage() {
           </div>
         </a>
       </div>
+
+      {/* CV PDF Preview Modal */}
+      {isCvModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setIsCvModalOpen(false)}>
+          <div className="relative w-full max-w-4xl rounded-2xl bg-[#09091e] border border-white/10 p-5 text-white shadow-2xl flex flex-col gap-4 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
+                CV / Resume Preview
+              </h3>
+              <div className="flex gap-2">
+                <a href={about.cvUrl} download className="p-2 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1.5 text-slate-300 hover:text-white" title="Unduh CV">
+                  <FileText className="w-5 h-5" />
+                  <span className="text-xs hidden sm:inline">Download</span>
+                </a>
+                <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-300 hover:text-white" onClick={() => setIsCvModalOpen(false)}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="w-full flex-1 min-h-[60vh] rounded-xl overflow-hidden bg-black/40">
+              <iframe src={about.cvUrl} className="w-full h-[60vh] border-0" title="CV / Resume PDF Preview" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

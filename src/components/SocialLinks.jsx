@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { fetchSiteContent, readSiteContent, SITE_CONTENT_UPDATED_EVENT } from "../data/siteContent";
 import {
   Linkedin,
   Github,
@@ -161,15 +162,83 @@ const SocialCard = ({ link, delay = 100, primary = false }) => {
 };
 
 const SocialLinks = () => {
-  const linkedIn = socialLinks.find((link) => link.isPrimary);
-  const otherLinks = socialLinks.filter((link) => !link.isPrimary);
-  const [instagram, youtube, github, tiktok] = otherLinks;
+  const [siteContent, setSiteContent] = useState(() => readSiteContent());
+  const home = siteContent.home;
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadContent = async () => {
+      const data = await fetchSiteContent();
+      if (mounted) setSiteContent(data);
+    };
+
+    const updateContent = () => setSiteContent(readSiteContent());
+
+    loadContent();
+    window.addEventListener("storage", updateContent);
+    window.addEventListener(SITE_CONTENT_UPDATED_EVENT, updateContent);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("storage", updateContent);
+      window.removeEventListener(SITE_CONTENT_UPDATED_EVENT, updateContent);
+    };
+  }, []);
 
   useEffect(() => {
     AOS.init({
       offset: 10,
     });
   }, []);
+
+  const dynamicLinks = socialLinks.map((link) => {
+    if (link.name === "LinkedIn") {
+      const url = home.linkedinUrl || "";
+      const hasUrl = url && url !== "#" && url !== "";
+      return {
+        ...link,
+        url: hasUrl ? url : "#",
+        disabled: !hasUrl,
+        subText: hasUrl ? (url.includes("linkedin.com/in/") ? "@" + url.split("linkedin.com/in/")[1].split("/")[0] : "LinkedIn Profile") : "Coming soon",
+      };
+    }
+    if (link.name === "Instagram") {
+      const url = home.instagramUrl || "https://www.instagram.com/r1stno?igsh=c2t0NmlpMjNodTQ%3D&utm_source=qr";
+      let username = "@r1stno";
+      try {
+        if (url.includes("instagram.com/")) {
+          const parts = url.split("instagram.com/")[1].split("?")[0].split("/");
+          username = "@" + parts[0];
+        }
+      } catch (e) {}
+      return {
+        ...link,
+        url: url,
+        subText: username,
+      };
+    }
+    if (link.name === "GitHub") {
+      const url = home.githubUrl || "https://github.com/wansfishit";
+      let username = "@wansfishit";
+      try {
+        if (url.includes("github.com/")) {
+          const parts = url.split("github.com/")[1].split("?")[0].split("/");
+          username = "@" + parts[0];
+        }
+      } catch (e) {}
+      return {
+        ...link,
+        url: url,
+        subText: username,
+      };
+    }
+    return link;
+  });
+
+  const linkedIn = dynamicLinks.find((link) => link.isPrimary);
+  const otherLinks = dynamicLinks.filter((link) => !link.isPrimary);
+  const [instagram, youtube, github, tiktok] = otherLinks;
 
   return (
     <div className="w-full bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 py-8 backdrop-blur-xl">

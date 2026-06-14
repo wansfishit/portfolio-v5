@@ -1,10 +1,35 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, ArrowRight } from "lucide-react";
 import { toSlug } from "../utils/slug";
+import { playHoverSound, playClickSound } from "../utils/audio";
 
 const CardProject = ({ Img, Title, Description, Link: ProjectLink, id }) => {
+  const [transformStyle, setTransformStyle] = useState("");
+
+  const handleMouseMove = (e) => {
+    const card = e.currentTarget;
+    const box = card.getBoundingClientRect();
+    const x = e.clientX - box.left - box.width / 2;
+    const y = e.clientY - box.top - box.height / 2;
+    
+    // Tilt calculations (max 8 degrees)
+    const rotateX = (y / (box.height / 2)) * -8;
+    const rotateY = (x / (box.width / 2)) * 8;
+    
+    setTransformStyle(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`);
+  };
+
+  const handleMouseEnter = () => {
+    playHoverSound();
+  };
+
+  const handleMouseLeave = () => {
+    setTransformStyle("perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)");
+  };
+
   const handleLiveDemo = (e) => {
+    playClickSound();
     if (!ProjectLink) {
       console.log("ProjectLink kosong");
       e.preventDefault();
@@ -13,6 +38,7 @@ const CardProject = ({ Img, Title, Description, Link: ProjectLink, id }) => {
   };
 
   const handleDetails = (e) => {
+    playClickSound();
     if (!id) {
       console.log("ID kosong");
       e.preventDefault();
@@ -21,11 +47,20 @@ const CardProject = ({ Img, Title, Description, Link: ProjectLink, id }) => {
   };
 
   return (
-    <div className="group relative w-full">
+    <div 
+      className="group relative w-full transition-transform duration-200 ease-out"
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        transform: transformStyle,
+        transformStyle: "preserve-3d",
+      }}
+    >
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-lg border border-white/10 shadow-2xl transition-all duration-300 hover:shadow-purple-500/20">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 opacity-50 group-hover:opacity-70 transition-opacity duration-300"></div>
 
-        <div className="relative p-5 z-10">
+        <div className="relative p-5 z-10" style={{ transform: "translateZ(30px)" }}>
           <div className="relative overflow-hidden rounded-lg">
             <img
               src={Img}

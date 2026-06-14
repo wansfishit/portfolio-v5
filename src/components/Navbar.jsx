@@ -1,10 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Volume2, VolumeX } from "lucide-react";
+import { playHoverSound, playClickSound } from "../utils/audio";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [activeSection, setActiveSection] = useState("Home");
+    const [theme, setTheme] = useState(() => localStorage.getItem("portfolioTheme") || "default");
+    const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem("soundEnabled") === "true");
+
+    useEffect(() => {
+        document.documentElement.className = "";
+        if (theme !== "default") {
+            document.documentElement.classList.add(`theme-${theme}`);
+        }
+        localStorage.setItem("portfolioTheme", theme);
+    }, [theme]);
+
+    useEffect(() => {
+        localStorage.setItem("soundEnabled", soundEnabled ? "true" : "false");
+        window.dispatchEvent(new CustomEvent("soundSettingsChanged", { detail: soundEnabled }));
+    }, [soundEnabled]);
     
     const navItems = [
         { href: "#Home", label: "Home" },
@@ -95,7 +111,11 @@ const Navbar = () => {
                                 <a
                                     key={item.label}
                                     href={item.href}
-                                    onClick={(e) => scrollToSection(e, item.href)}
+                                    onMouseEnter={() => playHoverSound()}
+                                    onClick={(e) => {
+                                        playClickSound();
+                                        scrollToSection(e, item.href);
+                                    }}
                                     className="group relative px-1 py-2 text-sm font-medium"
                                 >
                                     <span
@@ -116,6 +136,38 @@ const Navbar = () => {
                                     />
                                 </a>
                             ))}
+
+                            {/* Color Theme Switcher */}
+                            <div className="flex items-center gap-1.5 border-l border-white/10 pl-4">
+                                {[
+                                    { id: "default", color: "bg-[#6366f1]" },
+                                    { id: "cyberpunk", color: "bg-[#00f0ff]" },
+                                    { id: "matrix", color: "bg-[#00ff66]" },
+                                    { id: "sunset", color: "bg-[#ff5e36]" }
+                                ].map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => { setTheme(t.id); setTimeout(playClickSound, 50); }}
+                                        className={`w-3.5 h-3.5 rounded-full ${t.color} transition-all duration-300 transform hover:scale-125 focus:outline-none ${theme === t.id ? "ring-2 ring-white scale-110" : ""}`}
+                                        title={`Theme: ${t.id}`}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Sound Toggle */}
+                            <button
+                                onClick={() => {
+                                    const nextSound = !soundEnabled;
+                                    setSoundEnabled(nextSound);
+                                    localStorage.setItem("soundEnabled", nextSound ? "true" : "false");
+                                    if (nextSound) setTimeout(playClickSound, 50);
+                                }}
+                                onMouseEnter={() => playHoverSound()}
+                                className="p-1.5 rounded-lg border border-white/10 hover:border-white/20 text-[#e2d3fd] hover:text-white transition-colors"
+                                title={soundEnabled ? "Mute sounds" : "Enable click sounds"}
+                            >
+                                {soundEnabled ? <Volume2 className="w-4 h-4 text-indigo-400" /> : <VolumeX className="w-4 h-4 text-gray-500" />}
+                            </button>
                         </div>
                     </div>
         
@@ -150,7 +202,11 @@ const Navbar = () => {
                         <a
                             key={item.label}
                             href={item.href}
-                            onClick={(e) => scrollToSection(e, item.href)}
+                            onMouseEnter={() => playHoverSound()}
+                            onClick={(e) => {
+                                playClickSound();
+                                scrollToSection(e, item.href);
+                            }}
                             className={`block px-4 py-3 text-lg font-medium transition-all duration-300 ease ${
                                 activeSection === item.href.substring(1)
                                     ? "bg-gradient-to-r from-[#6366f1] to-[#a855f7] bg-clip-text text-transparent font-semibold"
@@ -165,6 +221,42 @@ const Navbar = () => {
                             {item.label}
                         </a>
                     ))}
+
+                    {/* Mobile Settings Controls */}
+                    <div className="pt-4 border-t border-white/10 flex items-center justify-between px-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">Theme:</span>
+                            <div className="flex items-center gap-1.5">
+                                {[
+                                    { id: "default", color: "bg-[#6366f1]" },
+                                    { id: "cyberpunk", color: "bg-[#00f0ff]" },
+                                    { id: "matrix", color: "bg-[#00ff66]" },
+                                    { id: "sunset", color: "bg-[#ff5e36]" }
+                                ].map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => { setTheme(t.id); playClickSound(); }}
+                                        className={`w-4 h-4 rounded-full ${t.color} focus:outline-none ${theme === t.id ? "ring-2 ring-white scale-110" : ""}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">Sound:</span>
+                            <button
+                                onClick={() => {
+                                    const nextSound = !soundEnabled;
+                                    setSoundEnabled(nextSound);
+                                    localStorage.setItem("soundEnabled", nextSound ? "true" : "false");
+                                    if (nextSound) playClickSound();
+                                }}
+                                className="p-1.5 rounded-lg border border-white/10 text-white"
+                            >
+                                {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-indigo-400" /> : <VolumeX className="w-3.5 h-3.5 text-gray-500" />}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </nav>
