@@ -272,3 +272,18 @@ body {
 .to-\[\#8644c5\] {
   --tw-gradient-to: var(--secondary-color) !important;
 }
+
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: ripple 0.6s ease-out forwards;
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../supabase";
+import Swal from "sweetalert2";
 import {
   Plus,
   Trash2,
@@ -353,8 +354,13 @@ export default function Projects() {
   }, []);
 
   const uploadImage = async (f) => {
-    const fileName = `${Date.now()}-${f.name}`;
-    await supabase.storage.from("project-images").upload(fileName, f);
+    const fileExt = f.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const safeName = f.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '-').slice(0, 60);
+    const fileName = `project-${Date.now()}-${safeName}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage.from("project-images").upload(fileName, f);
+    if (uploadError) throw uploadError;
+
     const { data } = supabase.storage
       .from("project-images")
       .getPublicUrl(fileName);
@@ -363,55 +369,90 @@ export default function Projects() {
 
   const handleCreate = async (form, file) => {
     setUploading(true);
-    let imgUrl = "";
-    if (file) imgUrl = await uploadImage(file);
-    await supabase.from("projects").insert({
-      Title: form.Title,
-      Description: form.Description,
-      Img: imgUrl,
-      TechStack: form.TechStack.split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      Features: form.Features.split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      Link: form.Link,
-      Github: form.Github,
-    });
-    setShowCreate(false);
-    setUploading(false);
-    fetchProjects();
-  };
-
-  const handleEdit = async (form, file) => {
-    setUploading(true);
-    let imgUrl = editProject.Img || "";
-    if (file) imgUrl = await uploadImage(file);
-    await supabase
-      .from("projects")
-      .update({
+    try {
+      let imgUrl = "";
+      if (file) imgUrl = await uploadImage(file);
+      const { error } = await supabase.from("projects").insert({
         Title: form.Title,
         Description: form.Description,
         Img: imgUrl,
-        TechStack: form.TechStack.split(",")
+        TechStack: (form.TechStack || "").split(",")
           .map((s) => s.trim())
           .filter(Boolean),
-        Features: form.Features.split(",")
+        Features: (form.Features || "").split(",")
           .map((s) => s.trim())
           .filter(Boolean),
         Link: form.Link,
         Github: form.Github,
-      })
-      .eq("id", editProject.id);
-    setEditProject(null);
-    setUploading(false);
-    fetchProjects();
+      });
+      if (error) throw error;
+      setShowCreate(false);
+      Swal.fire({ icon: 'success', title: 'Success', text: 'Project added successfully!' });
+      fetchProjects();
+    } catch (error) {
+      console.error(error);
+      Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Failed to add project' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEdit = async (form, file) => {
+    setUploading(true);
+    try {
+      let imgUrl = editProject.Img || "";
+      if (file) imgUrl = await uploadImage(file);
+      const { error } = await supabase
+        .from("projects")
+        .update({
+          Title: form.Title,
+          Description: form.Description,
+          Img: imgUrl,
+          TechStack: (form.TechStack || "").split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          Features: (form.Features || "").split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          Link: form.Link,
+          Github: form.Github,
+        })
+        .eq("id", editProject.id);
+      if (error) throw error;
+      setEditProject(null);
+      Swal.fire({ icon: 'success', title: 'Success', text: 'Project updated successfully!' });
+      fetchProjects();
+    } catch (error) {
+      console.error(error);
+      Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Failed to update project' });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const deleteProject = async (id) => {
-    if (!confirm("Delete this project?")) return;
-    await supabase.from("projects").delete().eq("id", id);
-    fetchProjects();
+    const result = await Swal.fire({
+      title: 'Delete this project?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#3b82f6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    
+    if (!result.isConfirmed) return;
+
+    try {
+      const { error } = await supabase.from("projects").delete().eq("id", id);
+      if (error) throw error;
+      
+      Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Project has been deleted.' });
+      fetchProjects();
+    } catch (error) {
+      console.error(error);
+      Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Failed to delete project' });
+    }
   };
 
   return (
